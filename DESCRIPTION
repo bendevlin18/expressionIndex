@@ -19,3 +19,5 @@ Imports:
 Depends: 
     R (>= 3.5)
 LazyData: true
+URL: https://github.com/bendevlin18/expressionIndex
+BugReports: https://github.com/bendevlin18/expressionIndex/issues
