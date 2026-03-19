@@ -1,3 +1,3 @@
-# expressionIndex (development version)
+# expressionIndex 0.1.0
 
-* Initial CRAN submission.
+* Initial release

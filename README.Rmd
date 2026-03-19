@@ -1,0 +1,274 @@
+---
+title: "README"
+output: html_document
+date: "2026-03-17"
+---
+
+# ExpressionIndex
+
+**ExpressionIndex** is an R package for calculating biologically meaningful
+transcriptional indices from gene expression datasets. It provides fast
+utilities to compute index scores, integrate them into common
+bioinformatics objects (Seurat and DESeq2), and explore transcriptional
+transitions across ordered cellular states.
+
+The package is designed primarily for **single-cell, spatial, and bulk RNA-seq
+workflows** and includes built-in reference datasets for several
+biologically validated indices.
+
+------------------------------------------------------------------------
+
+# Included Indices
+
+ExpressionIndex includes pre-generated gene index datasets that allow users
+to immediately compute index scores:
+
+-   **Microglia Development Index** -- measures transcriptional
+    progression along the microglial developmental trajectory. Data from Hanamsagar et al., 2017 (PMID: 28618077).
+-   **Fast Spiking Interneuron Index** -- captures transcriptional
+    identity of fast-spiking interneurons. Data from Gandal et al., 2012 (PMID: 22936973).
+-   **LPS Microglia Index** -- measures inflammatory activation of
+    microglia in response to LPS-like signatures. Data from Hanamsagar et al., 2017 (PMID: 28618077).
+
+Each index dataset contains:
+
+  -----------------------------------------------------------------------
+  Column                 Description
+  ---------------------- ------------------------------------------------
+  `gene`                 Gene symbol
+
+  `direction`            `"UP"` or `"DOWN"` indicating whether the gene
+                         positively or negatively contributes to the
+                         index
+  -----------------------------------------------------------------------
+
+Index scores are calculated as:
+
+    (mean expression of UP genes) / (mean expression of DOWN genes)
+
+This formulation provides a simple interpretable metric of
+transcriptional state. That is widely applicable across datasets.
+
+------------------------------------------------------------------------
+
+# Installation
+
+``` r
+# install.packages("devtools")
+devtools::install_github("bendevlin18/expressionIndex")
+```
+
+Load the package:
+
+``` r
+library(expressionIndex)
+```
+
+------------------------------------------------------------------------
+
+# Basic Usage
+
+## Calculate an Index from a Gene Expression Matrix
+
+``` r
+idx <- calculate_index(
+  mat = expression_matrix,
+  index_df = microglia_dev_index
+)
+
+head(idx)
+```
+
+Where:
+
+-   `mat` = genes × samples expression matrix\
+-   `index_df` = dataframe containing index genes
+
+------------------------------------------------------------------------
+
+# Seurat Integration
+
+## Add an Index to a Seurat Object
+
+``` r
+seurat_obj <- calculate_index_seurat(
+  seurat_obj,
+  index_df = microglia_dev_index,
+  column_name = "developmental_index"
+)
+```
+
+The index will be added to Seurat metadata:
+
+``` r
+head(seurat_obj@meta.data$developmental_index)
+```
+
+------------------------------------------------------------------------
+
+## Calculate Gene Variance per Cell
+
+``` r
+seurat_obj <- seurat_gene_var(
+  s_obj = seurat_obj,
+  column_name = "gene_variance"
+)
+```
+
+This calculates variance across genes for each cell and adds it to
+metadata.
+
+------------------------------------------------------------------------
+
+# Rolling Variance Analysis
+
+To examine how transcriptional variability changes across a
+developmental trajectory:
+
+``` r
+rolling <- rolling_variance_index(
+  seurat_obj,
+  index_col = "developmental_index",
+  variance_col = "gene_variance",
+  window_size = 200
+)
+```
+
+Returns a dataframe containing:
+
+  column       description
+  ------------ -------------------------------
+  `index`      rolling average index value
+  `variance`   rolling average gene variance
+
+This is useful for identifying **transition points in cellular state
+space**.
+
+------------------------------------------------------------------------
+
+# Identify Transition Genes
+
+The package includes a memory-efficient implementation for identifying
+genes correlated with an index trajectory.
+
+``` r
+transition_genes <- find_transition_genes(
+  seurat_obj,
+  index_name = "developmental_index",
+  chunk_size = 500
+)
+```
+
+Features:
+
+-   Chunked computation to prevent excessive memory use
+-   Spearman-like rank correlation
+-   Filtering of low-expression genes
+
+Output:
+
+  column   description
+  -------- -----------------------------------------------
+  `cors`   correlation between gene expression and index
+
+Genes with high positive or negative correlations may drive cellular
+transitions.
+
+------------------------------------------------------------------------
+
+# DESeq2 Integration
+
+Indices can also be added directly to a **DESeq2 dataset**.
+
+``` r
+dds <- calculate_index_deseq(
+  dds,
+  index_df = microglia_dev_index,
+  use_vst = TRUE,
+  column_name = "developmental_index"
+)
+```
+
+Options:
+
+-   `use_vst = TRUE` uses variance stabilized data from DESeq2 (highly recommended)
+-   `use_vst = FALSE` uses normalized counts
+
+------------------------------------------------------------------------
+
+# TPM Calculation Utilities
+# While not entirely novel code, I often desire to calculate TPM on BulkRNASeq datasets for individual gene comparisons, so I wrote some functions into this package to help with just that!
+
+## From a Matrix
+
+``` r
+tpm <- calculate_tpm.matrix(
+  counts_mat,
+  length_vector = gene_lengths
+)
+```
+
+## From a DESeq2 Object
+
+``` r
+dds <- calculate_tpm.DESeqDataSet(
+  dds,
+  length_vector = gene_lengths,
+  assay_name = "TPM"
+)
+```
+
+------------------------------------------------------------------------
+
+# Example Workflow
+
+``` r
+library(bendevlin18/expressionIndex)
+library(Seurat)
+
+# load mdi
+data("mdi", package = "expressionIndex")
+
+# calculate developmental index
+seurat_obj <- calculate_index_seurat(
+  seurat_obj,
+  mdi
+)
+
+# compute gene variance
+seurat_obj <- seurat_gene_var(seurat_obj)
+
+# analyze transitions
+transition_genes <- find_transition_genes(seurat_obj)
+
+# rolling variance analysis
+rolling <- rolling_variance_index(seurat_obj)
+```
+
+------------------------------------------------------------------------
+
+# Package Philosophy
+
+expressionIndex is designed around a simple principle:
+
+> Biological state can often be summarized by interpretable gene
+> expression ratios.
+
+By combining curated gene sets with efficient implementations, the
+package provides lightweight tools for exploring transcriptional
+trajectories in **single-cell, spatial, and bulk RNA-seq datasets**.
+
+------------------------------------------------------------------------
+
+# Contributing
+
+Contributions and new index datasets are welcome. Please open an issue
+or submit a pull request. I am in the process of building specific tools within
+the package that will allow quick creation of indices.
+
+------------------------------------------------------------------------
+
+# License
+
+MIT License
+
