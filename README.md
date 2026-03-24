@@ -1,46 +1,42 @@
----
-title: "README"
-output: github_document
-date: "2026-03-17"
----
+README
+================
+2026-03-17
 
 # ExpressionIndex
 
-**ExpressionIndex** is an R package for calculating biologically meaningful
-transcriptional indices from gene expression datasets. It provides fast
-utilities to compute index scores, integrate them into common
-bioinformatics objects (Seurat and DESeq2), and explore transcriptional
-transitions across ordered cellular states.
+**ExpressionIndex** is an R package for calculating biologically
+meaningful transcriptional indices from gene expression datasets. It
+provides fast utilities to compute index scores, integrate them into
+common bioinformatics objects (Seurat and DESeq2), and explore
+transcriptional transitions across ordered cellular states.
 
-The package is designed primarily for **single-cell, spatial, and bulk RNA-seq
-workflows** and includes built-in reference datasets for several
+The package is designed primarily for **single-cell, spatial, and bulk
+RNA-seq workflows** and includes built-in reference datasets for several
 biologically validated indices.
 
 ------------------------------------------------------------------------
 
 # Included Indices
 
-ExpressionIndex includes pre-generated gene index datasets that allow users
-to immediately compute index scores:
+ExpressionIndex includes pre-generated gene index datasets that allow
+users to immediately compute index scores:
 
--   **Microglia Development Index** -- measures transcriptional
-    progression along the microglial developmental trajectory. Data from Hanamsagar et al., 2017 (PMID: 28618077).
--   **Fast Spiking Interneuron Index** -- captures transcriptional
-    identity of fast-spiking interneurons. Data from Gandal et al., 2012 (PMID: 22936973).
--   **LPS Microglia Index** -- measures inflammatory activation of
-    microglia in response to LPS-like signatures. Data from Hanamsagar et al., 2017 (PMID: 28618077).
+- **Microglia Development Index** – measures transcriptional progression
+  along the microglial developmental trajectory. Data from Hanamsagar et
+  al., 2017 (PMID: 28618077).
+- **Fast Spiking Interneuron Index** – captures transcriptional identity
+  of fast-spiking interneurons. Data from Gandal et al., 2012 (PMID:
+  22936973).
+- **LPS Microglia Index** – measures inflammatory activation of
+  microglia in response to LPS-like signatures. Data from Hanamsagar et
+  al., 2017 (PMID: 28618077).
 
 Each index dataset contains:
 
-  -----------------------------------------------------------------------
-  Column                 Description
-  ---------------------- ------------------------------------------------
-  `gene`                 Gene symbol
-
-  `direction`            `"UP"` or `"DOWN"` indicating whether the gene
-                         positively or negatively contributes to the
-                         index
-  -----------------------------------------------------------------------
+| Column | Description |
+|:---|:---|
+| `gene` | Gene symbol |
+| `direction` | `"UP"` or `"DOWN"` indicating whether the gene positively or negatively contributes to the index |
 
 Index scores are calculated as:
 
@@ -81,8 +77,8 @@ head(idx)
 
 Where:
 
--   `mat` = genes × samples expression matrix\
--   `index_df` = dataframe containing index genes
+- `mat` = genes × samples expression matrix  
+- `index_df` = dataframe containing index genes
 
 ------------------------------------------------------------------------
 
@@ -136,10 +132,10 @@ rolling <- rolling_variance_index(
 
 Returns a dataframe containing:
 
-  column       description
-  ------------ -------------------------------
-  `index`      rolling average index value
-  `variance`   rolling average gene variance
+| column     | description                   |
+|:-----------|:------------------------------|
+| `index`    | rolling average index value   |
+| `variance` | rolling average gene variance |
 
 This is useful for identifying **transition points in cellular state
 space**.
@@ -161,15 +157,15 @@ transition_genes <- find_transition_genes(
 
 Features:
 
--   Chunked computation to prevent excessive memory use
--   Spearman-like rank correlation
--   Filtering of low-expression genes
+- Chunked computation to prevent excessive memory use
+- Spearman-like rank correlation
+- Filtering of low-expression genes
 
 Output:
 
-  column   description
-  -------- -----------------------------------------------
-  `cors`   correlation between gene expression and index
+| column | description                                   |
+|:-------|:----------------------------------------------|
+| `cors` | correlation between gene expression and index |
 
 Genes with high positive or negative correlations may drive cellular
 transitions.
@@ -191,12 +187,14 @@ dds <- calculate_index_deseq(
 
 Options:
 
--   `use_vst = TRUE` uses variance stabilized data from DESeq2 (highly recommended)
--   `use_vst = FALSE` uses normalized counts
+- `use_vst = TRUE` uses variance stabilized data from DESeq2 (highly
+  recommended)
+- `use_vst = FALSE` uses normalized counts
 
 ------------------------------------------------------------------------
 
 # TPM Calculation Utilities
+
 # While not entirely novel code, I often desire to calculate TPM on BulkRNASeq datasets for individual gene comparisons, so I wrote some functions into this package to help with just that!
 
 ## From a Matrix
@@ -263,12 +261,11 @@ trajectories in **single-cell, spatial, and bulk RNA-seq datasets**.
 # Contributing
 
 Contributions and new index datasets are welcome. Please open an issue
-or submit a pull request. I am in the process of building specific tools within
-the package that will allow quick creation of indices.
+or submit a pull request. I am in the process of building specific tools
+within the package that will allow quick creation of indices.
 
 ------------------------------------------------------------------------
 
 # License
 
 MIT License
-
