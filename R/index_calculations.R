@@ -193,6 +193,111 @@ calculate_index_deseq <- function(dds, index_df, gene_column = 'gene', direction
 }
 
 
+#' Scale expression of each gene to 0-1 range across samples
+#'
+#' @param mat A genes x samples expression matrix
+#' @return A matrix with each gene min-max scaled across samples
+#' @keywords internal
+
+scale_expression <- function(mat) {
+  t(apply(mat, 1, function(x) {
+    rng <- max(x) - min(x)
+    if (rng == 0) return(rep(0, length(x)))
+    (x - min(x)) / rng
+  }))
+}
+
+
+#' Remove unexpressed or NA genes from a matrix
+#'
+#' @param mat A genes x samples expression matrix
+#' @return The matrix with NA-containing and zero-sum rows removed
+#' @keywords internal
+
+drop_unexpressed_genes <- function(mat) {
+  mat <- mat[complete.cases(mat), , drop = FALSE]
+  mat <- mat[rowSums(mat) > 0, , drop = FALSE]
+  mat
+}
+
+
+#' Create a new expression index from a gene expression matrix
+#'
+#' Identifies genes that are significantly differentially expressed between two
+#' sample groups and returns an index data frame compatible with \code{calculate_index()}.
+#' Expression is min-max scaled per gene before testing so all genes contribute
+#' equal weight. Significance is determined by a two-sample t-test and the direction
+#' of regulation by log2 fold change (group2 / group1).
+#'
+#' @param mat A genes x samples expression matrix (pre-normalized: TPM, FPKM, VST, etc.)
+#' @param group1 Character vector of column names representing the low/early state
+#' @param group2 Character vector of column names representing the high/late state
+#' @param p_threshold Significance cutoff for the t-test. Default is 0.05
+#' @param gene_column Name for the gene column in the output data frame. Default is \code{"gene"}
+#' @param direction_column Name for the direction column in the output data frame. Default is \code{"direction"}
+#' @param valence_column Name for the valence (log2FC) column in the output data frame. Default is \code{"valence"}
+#'
+#' @return A data frame with columns \code{gene}, \code{direction} (\code{"UP"} or \code{"DOWN"}),
+#'   and \code{valence} (log2 fold change), sorted descending by valence. This output is
+#'   directly compatible with \code{calculate_index()} and the rest of the pipeline.
+#' @export
+#'
+
+create_index <- function(mat, group1, group2, p_threshold = 0.05,
+                         gene_column = "gene", direction_column = "direction",
+                         valence_column = "valence") {
+
+  mat <- drop_unexpressed_genes(mat)
+  mat <- scale_expression(mat)
+
+  g1_mat <- mat[, group1, drop = FALSE]
+  g2_mat <- mat[, group2, drop = FALSE]
+
+  n_genes <- nrow(mat)
+  pvals   <- numeric(n_genes)
+  log2fc  <- numeric(n_genes)
+
+  for (i in seq_len(n_genes)) {
+    g1_vals <- as.numeric(g1_mat[i, ])
+    g2_vals <- as.numeric(g2_mat[i, ])
+
+    mean_g1 <- mean(g1_vals)
+    mean_g2 <- mean(g2_vals)
+
+    if (mean_g1 == 0 || mean_g2 == 0) {
+      pvals[i]  <- NA
+      log2fc[i] <- NA
+      next
+    }
+
+    pvals[i]  <- stats::t.test(g1_vals, g2_vals, var.equal = TRUE)$p.value
+    log2fc[i] <- log2(mean_g2 / mean_g1)
+  }
+
+  direction <- ifelse(
+    !is.na(pvals) & pvals < p_threshold & log2fc > 0, "UP",
+    ifelse(!is.na(pvals) & pvals < p_threshold & log2fc < 0, "DOWN", NA)
+  )
+
+  result <- data.frame(
+    gene      = rownames(mat),
+    direction = direction,
+    valence   = log2fc,
+    stringsAsFactors = FALSE
+  )
+
+  names(result)[names(result) == "gene"]      <- gene_column
+  names(result)[names(result) == "direction"] <- direction_column
+  names(result)[names(result) == "valence"]   <- valence_column
+
+  result <- result[!is.na(result[[direction_column]]), ]
+  result <- result[order(result[[valence_column]], decreasing = TRUE), ]
+  rownames(result) <- NULL
+
+  result
+}
+
+
 #' Function for calculating TPM on any gene matrix
 #'
 #' @param counts_mat Matrix of gene counts
